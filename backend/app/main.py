@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User
+from app.models import User, Subject
 
 
 app = FastAPI(
@@ -45,4 +45,33 @@ def create_user(
         "id": user.id,
         "name": user.name,
         "email": user.email
+    }
+
+@app.post("/subjects")
+def create_subject(
+    name: str,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(
+        status_code=404,
+        detail="User not found"
+    )
+
+    subject = Subject(
+        name=name,
+        user_id=user_id
+    )
+
+    db.add(subject)
+    db.commit()
+    db.refresh(subject)
+
+    return {
+        "id": subject.id,
+        "name": subject.name,
+        "user_id": subject.user_id
     }
