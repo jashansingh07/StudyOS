@@ -47,6 +47,51 @@ def create_user(
         "email": user.email
     }
 
+@app.get("/users/{user_id}")
+def get_user(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    return {
+        "id": user.id,
+        "name": user.name,
+        "email": user.email
+    }
+
+@app.get("/users/{user_id}/subjects")
+def get_user_subjects(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    subjects = db.query(Subject).filter(
+        Subject.user_id == user_id
+    ).all()
+
+    return [
+        {
+            "id": subject.id,
+            "name": subject.name,
+            "user_id": subject.user_id
+        }
+        for subject in subjects
+    ]
+
 @app.post("/subjects")
 def create_subject(
     name: str,
