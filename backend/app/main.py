@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
-from fastapi.security import  OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -11,7 +11,9 @@ from app.auth import (
     verify_access_token
 )
 
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+
 
 app = FastAPI(
     title="StudyOS API",
@@ -57,6 +59,7 @@ def create_user(
         "email": user.email
     }
 
+
 @app.get("/users/{user_id}")
 def get_user(
     user_id: int,
@@ -76,60 +79,6 @@ def get_user(
         "email": user.email
     }
 
-@app.get("/users/{user_id}/subjects")
-def get_user_subjects(
-    user_id: int,
-    db: Session = Depends(get_db)
-):
-    user = db.query(User).filter(User.id == user_id).first()
-
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found"
-        )
-
-    subjects = db.query(Subject).filter(
-        Subject.user_id == user_id
-    ).all()
-
-    return [
-        {
-            "id": subject.id,
-            "name": subject.name,
-            "user_id": subject.user_id
-        }
-        for subject in subjects
-    ]
-
-@app.post("/subjects")
-def create_subject(
-    name: str,
-    user_id: int,
-    db: Session = Depends(get_db)
-):
-    user = db.query(User).filter(User.id == user_id).first()
-
-    if not user:
-        raise HTTPException(
-        status_code=404,
-        detail="User not found"
-    )
-
-    subject = Subject(
-        name=name,
-        user_id=user_id
-    )
-
-    db.add(subject)
-    db.commit()
-    db.refresh(subject)
-
-    return {
-        "id": subject.id,
-        "name": subject.name,
-        "user_id": subject.user_id
-    }
 
 @app.post("/login")
 def login(
@@ -171,7 +120,7 @@ def login(
         "email": user.email
     }
 
-@app.get("/me")
+
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
@@ -194,8 +143,63 @@ def get_current_user(
             detail="User not found"
         )
 
+    return user
+
+
+@app.get("/me")
+def me(
+    current_user: User = Depends(get_current_user)
+):
     return {
-        "id": user.id,
-        "name": user.name,
-        "email": user.email
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email
+    }
+
+
+@app.get("/users/{user_id}/subjects")
+def get_user_subjects(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to access this user's subjects"
+        )
+
+    subjects = db.query(Subject).filter(
+        Subject.user_id == current_user.id
+    ).all()
+
+    return [
+        {
+            "id": subject.id,
+            "name": subject.name,
+            "user_id": subject.user_id
+        }
+        for subject in subjects
+    ]
+
+
+@app.post("/subjects")
+def create_subject(
+    name: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    subject = Subject(
+        name=name,
+        user_id=current_user.id
+    )
+
+    db.add(subject)
+    db.commit()
+    db.refresh(subject)
+
+    return {
+        "id": subject.id,
+        "name": subject.name,
+        "user_id": subject.user_id
     }
