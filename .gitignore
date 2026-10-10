@@ -26,3 +26,10 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Uploaded documents and generated files
+backend/uploads/
+
+# Temporary local test scripts
+backend/test_pdf_reader.py
+backend/test_upload.py
