@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 
 from pypdf import PdfReader
 
+from fastapi.middleware.cors import CORSMiddleware
+
 from fastapi import (
     FastAPI,
     Depends,
@@ -58,6 +60,18 @@ app = FastAPI(
     title="StudyOS API",
     description="AI Academic Mentor & Multi-Source Learning Platform",
     version="0.1.0"
+)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

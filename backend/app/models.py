@@ -38,12 +38,24 @@ class DocumentChunk(Base):
     __tablename__ = "document_chunks"
 
     id = Column(Integer, primary_key=True, index=True)
-    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+
+    document_id = Column(
+        Integer,
+        ForeignKey("documents.id"),
+        nullable=False
+    )
 
     text = Column(String, nullable=False)
+
     page = Column(Integer, nullable=True)
+
     topic = Column(String, nullable=True)
+
+    # Reference to an external embedding, if needed
     embedding_ref = Column(String, nullable=True)
+
+    # Stores the actual embedding vector as JSON
+    embedding = Column(JSON, nullable=True)
 
 
 class Topic(Base):
