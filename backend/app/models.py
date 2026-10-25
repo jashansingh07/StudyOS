@@ -1,4 +1,12 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, JSON
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    ForeignKey,
+    DateTime,
+    JSON,
+    Text,
+)
 
 from app.database import Base
 
@@ -25,7 +33,6 @@ class Document(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
-
     filename = Column(String, nullable=False)
     type = Column(String, nullable=False)
     storage_ref = Column(String, nullable=False)
@@ -38,23 +45,17 @@ class DocumentChunk(Base):
     __tablename__ = "document_chunks"
 
     id = Column(Integer, primary_key=True, index=True)
-
     document_id = Column(
         Integer,
         ForeignKey("documents.id"),
-        nullable=False
+        nullable=False,
     )
-
     text = Column(String, nullable=False)
-
     page = Column(Integer, nullable=True)
-
     topic = Column(String, nullable=True)
-
-    # Reference to an external embedding, if needed
+    # Reference to an external embedding, if needed.
     embedding_ref = Column(String, nullable=True)
-
-    # Stores the actual embedding vector as JSON
+    # Stores the actual embedding vector as JSON.
     embedding = Column(JSON, nullable=True)
 
 
@@ -63,10 +64,10 @@ class Topic(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
-
     name = Column(String, nullable=False)
     description = Column(String, nullable=True)
     mastery = Column(Integer, nullable=True)
+
 
 class Question(Base):
     __tablename__ = "questions"
@@ -76,47 +77,79 @@ class Question(Base):
     source_document_id = Column(
         Integer,
         ForeignKey("documents.id"),
-        nullable=True
+        nullable=True,
     )
-
     text = Column(String, nullable=False)
     year = Column(Integer, nullable=True)
     topic = Column(String, nullable=True)
+
 
 class QuizAttempt(Base):
     __tablename__ = "quiz_attempts"
 
     id = Column(Integer, primary_key=True, index=True)
-
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
     topic_id = Column(Integer, ForeignKey("topics.id"), nullable=True)
-
     score = Column(Integer, nullable=False)
     mistakes = Column(JSON, nullable=True)
     timestamp = Column(DateTime, nullable=False)
+
 
 class StudyPlan(Base):
     __tablename__ = "study_plans"
 
     id = Column(Integer, primary_key=True, index=True)
-
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
-
     deadline = Column(DateTime, nullable=True)
     daily_time = Column(Integer, nullable=True)
     plan_data = Column(JSON, nullable=True)
     status = Column(String, nullable=False)
 
+
 class ProgressEvent(Base):
     __tablename__ = "progress_events"
 
     id = Column(Integer, primary_key=True, index=True)
-
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     topic_id = Column(Integer, ForeignKey("topics.id"), nullable=False)
-
     event_type = Column(String, nullable=False)
     value = Column(Integer, nullable=True)
     timestamp = Column(DateTime, nullable=False)
+
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+    subject_id = Column(
+        Integer,
+        ForeignKey("subjects.id"),
+        nullable=False,
+        index=True,
+    )
+    title = Column(String, nullable=False, default="New conversation")
+    created_at = Column(DateTime, nullable=False)
+    updated_at = Column(DateTime, nullable=False)
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(
+        Integer,
+        ForeignKey("conversations.id"),
+        nullable=False,
+        index=True,
+    )
+    role = Column(String, nullable=False)  # "user" or "assistant"
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False)

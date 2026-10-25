@@ -6,7 +6,7 @@ from google import genai
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
-from app.models import DocumentChunk
+from app.models import Document, DocumentChunk
 
 
 # Load environment variables
@@ -24,18 +24,16 @@ client = genai.Client(api_key=api_key)
 # Set it to False to perform normal semantic search.
 DIAGNOSTIC_MODE = True
 
-# Your small test PDF has document ID 10.
-TEST_DOCUMENT_ID = 10
+# The small test PDF was uploaded as document ID 1.
+TEST_DOCUMENT_ID = 1
 
 
 def generate_embedding(text: str) -> list[float]:
     """Generate an embedding using Gemini."""
-
     response = client.models.embed_content(
         model="gemini-embedding-001",
         contents=text,
     )
-
     return response.embeddings[0].values
 
 
@@ -44,14 +42,10 @@ def cosine_similarity(
     vector_b: list[float],
 ) -> float:
     """Calculate cosine similarity between two vectors."""
-
     if len(vector_a) != len(vector_b):
         raise ValueError("Embedding dimensions do not match.")
 
-    dot_product = sum(
-        a * b for a, b in zip(vector_a, vector_b)
-    )
-
+    dot_product = sum(a * b for a, b in zip(vector_a, vector_b))
     magnitude_a = math.sqrt(sum(a * a for a in vector_a))
     magnitude_b = math.sqrt(sum(b * b for b in vector_b))
 
@@ -63,7 +57,6 @@ def cosine_similarity(
 
 def inspect_test_document() -> None:
     """Inspect embedded chunks from the small test PDF."""
-
     db: Session = SessionLocal()
 
     try:
@@ -95,7 +88,6 @@ def inspect_test_document() -> None:
             print(f"Text:\n{chunk.text[:1000]}")
 
         print("\nDiagnostic inspection completed.")
-
     finally:
         db.close()
 
@@ -103,40 +95,40 @@ def inspect_test_document() -> None:
 def search_chunks(
     query: str,
     top_k: int = 3,
+    subject_id: int | None = None,
 ) -> list[dict]:
-    """Retrieve the most relevant embedded chunks."""
-
+    """Retrieve relevant embedded chunks, optionally limited to one subject."""
     if not query.strip():
         return []
 
     # Generate the query embedding.
     query_embedding = generate_embedding(query)
-
     db: Session = SessionLocal()
 
     try:
-        chunks = (
+        chunks_query = (
             db.query(DocumentChunk)
+            .join(Document, DocumentChunk.document_id == Document.id)
             .filter(DocumentChunk.embedding.is_not(None))
-            .all()
         )
 
+        # Restrict retrieval to documents belonging to the selected subject.
+        if subject_id is not None:
+            chunks_query = chunks_query.filter(
+                Document.subject_id == subject_id
+            )
+
+        chunks = chunks_query.all()
         results = []
         seen_texts = set()
 
         for chunk in chunks:
-            # Ignore duplicate text chunks.
             normalized_text = " ".join(chunk.text.split()).casefold()
-
             if normalized_text in seen_texts:
                 continue
 
             seen_texts.add(normalized_text)
-
-            score = cosine_similarity(
-                query_embedding,
-                chunk.embedding,
-            )
+            score = cosine_similarity(query_embedding, chunk.embedding)
 
             results.append(
                 {
@@ -152,29 +144,24 @@ def search_chunks(
             key=lambda result: result["similarity"],
             reverse=True,
         )
-
         return results[:top_k]
-
     finally:
         db.close()
 
 
 def main() -> None:
     """Run diagnostic inspection or semantic search."""
-
     if DIAGNOSTIC_MODE:
         inspect_test_document()
         return
 
     query = input("Enter your study question: ").strip()
-
     if not query:
         print("Please enter a question.")
         return
 
     try:
         results = search_chunks(query)
-
         print("\nMost relevant chunks:\n")
 
         if not results:
@@ -189,7 +176,6 @@ def main() -> None:
             print(f"Similarity: {result['similarity']:.4f}")
             print(f"Text: {result['text'][:500]}")
             print("-" * 60)
-
     except Exception as error:
         print(f"Search failed: {error}")
 

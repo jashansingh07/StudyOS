@@ -33,3 +33,8 @@ backend/uploads/
 # Temporary local test scripts
 backend/test_pdf_reader.py
 backend/test_upload.py
+# Local database
+backend/studyos.db
+
+# Temporary password reset script
+backend/reset_test_password.py
