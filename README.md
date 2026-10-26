@@ -20,7 +20,7 @@ identify weaknesses, and create personalized study plans.
 - Python
 
 ### Database
-- PostgreSQL
+- SQLite
 
 ### AI / RAG
 - LangChain
